@@ -14,36 +14,6 @@ SERV_COL = ['PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity'
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
-
-def sideBar():
-    training_data = None
-    training_model = "Logistic regression"
-    upload_type="File"
-    
-    with st.sidebar:
-        mode = st.selectbox(
-                "Select mode",
-                ("Training", "Testing")
-            )
-
-        if mode == "Training":
-            training_file = st.file_uploader("Upload csv file for training", type=["csv"])
-            if training_file is not None:
-                training_data = pd.read_csv(training_file)
-
-            training_model = st.selectbox(
-                "Select training model",
-                ("Logistic regression", "SVM", "Naive Bayes", "Decision tree", "XGBoost")
-            )
-            st.button("Start Training")
-        
-        if mode == "Testing":
-            upload_type = st.selectbox(
-                "Select testing data upload type",
-                ("File", "Inputs")
-            )
-    return mode, training_data, training_model, upload_type
-
 def main():
     training_data = None
     training_model = ""
@@ -72,7 +42,6 @@ def main():
                 ("File", "Inputs")
             )
     
-    print(training_model)
     if mode == "Training":
         dp = DataProcessor(df=training_data)
         drawer = Drawer(training_data)
@@ -171,5 +140,3 @@ def test():
 
 if __name__ == '__main__':
 	main()
-        
-
