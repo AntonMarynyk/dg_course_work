@@ -2,6 +2,8 @@
 import streamlit as st
 import pandas as pd
 from utils.data_processor import DataProcessor
+from utils.drawer import Drawer
+from utils.predictor import Predictor
 
 # Link to initial file with ds
 LINK = 'https://drive.google.com/uc?id=1tbgtf2us4bmZXWUDk9_EpgevwA1sI3Ri&export=download'
@@ -77,11 +79,15 @@ def main():
 
 
 def test():
-	dp = DataProcessor()
-	print(
-		dp.fetch_file(link=LINK)
-    )
-	dp.plot_correlation()
+    dp = DataProcessor()
+    df = dp.fetch_file(link=LINK)
+    X, Y = dp.prepare_data()
+    X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
+    x_sm, y_sm = dp.overSampling(X_train, Y_train)
+    x_rus, y_rus = dp.underSampling(X_train, Y_train)
+    predictor = Predictor()
+    best_model, best_predictions = predictor.get_xgbclassifier_best_model([('X_train', X_train, Y_train), ('x_rus', x_rus, y_rus), ('x_sm', x_sm, y_sm)], X_test, Y_test)
+    print(best_model)
 
 	
 
