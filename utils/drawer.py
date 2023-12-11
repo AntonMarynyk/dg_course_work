@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import seaborn as sns
@@ -10,10 +11,7 @@ class Drawer:
         self.df = df
 
     def plot_churn_dist(self):
-        # Рахуємо кількість відтоку та не відтоку
         churn_counts = self.df['Churn'].value_counts()
-
-        # Рахуємо відсоток відтоку та не відтоку
         churn_percentage = self.df['Churn'].value_counts(normalize=True) * 100
 
         # Побудова графіка
@@ -56,7 +54,8 @@ class Drawer:
         fig.data[0].marker.colors = ('lightblue', 'darkblue')
         fig.data[1].marker.colors = ('lightgreen', 'green')
 
-        fig.show()
+        # fig.show()
+        return fig
 
     def plot_churn_reason_dist(self):
         # Look at the distribution of reasons for churn
@@ -89,7 +88,7 @@ class Drawer:
         plt.show()
 
     def plot_columns_histogram(self, colum_names):
-        fig, axes = plt.subplots(nrows=len(colum_names), ncols=1, figsize=(1, 1))
+        fig, axes = plt.subplots(nrows=len(colum_names), ncols=1, figsize=(8, len(colum_names) * 4))
         colors = ['#256D85', '#FF4040']
 
         for i, col in enumerate(colum_names):
@@ -103,11 +102,12 @@ class Drawer:
 
         plt.tight_layout()
         plt.show()
+        return plt
     
     def plot_boxplots(self):
         self.df.TotalCharges = pd.to_numeric(self.df.TotalCharges, errors='coerce')
         number_features = ['tenure','MonthlyCharges', 'TotalCharges']
-        fig, axes = plt.subplots(1, 3, sharey=True, figsize=(20, 4))
+        fig, axes = plt.subplots(1, 3, sharey=True, figsize=(20, 10))
         fig.suptitle('Custom Boxplots for Numeric Features', y=1, size=25)
         axes = axes.flatten()
         for i, column in enumerate(number_features):
@@ -116,10 +116,11 @@ class Drawer:
 
         plt.tight_layout()
         plt.show()
+        return plt
 
     def plot_smooth_dist(self):
         sns.set_context('poster', font_scale=0.6)
-        fig, ax = plt.subplots(1, 3, figsize=(20, 6))
+        fig, ax = plt.subplots(1, 3, figsize=(20, 10))
 
         ax1 = sns.histplot(x=self.df['tenure'], color='purple', hue=self.df['Churn'], ax=ax[0], bins=15, kde=True, palette='muted')
         ax1.set(xlabel='Tenure', ylabel='Frequency')
@@ -132,6 +133,7 @@ class Drawer:
 
         plt.tight_layout()
         plt.show()
+        return plt
     
     def plot_correlation(self):
         df_copy = self.df.copy()
@@ -156,3 +158,4 @@ class Drawer:
             plt.xlabel('Features')
             plt.ylabel('Correlation with Churn')
             plt.show()
+            return plt

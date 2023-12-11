@@ -12,70 +12,148 @@ ACC_COL = ['Contract', 'PaperlessBilling', 'PaymentMethod']
 SERV_COL = ['PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity',
             'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies']
 
+st.set_option('deprecation.showPyplotGlobalUse', False)
+
+
+def sideBar():
+    training_data = None
+    training_model = "Logistic regression"
+    upload_type="File"
+    
+    with st.sidebar:
+        mode = st.selectbox(
+                "Select mode",
+                ("Training", "Testing")
+            )
+
+        if mode == "Training":
+            training_file = st.file_uploader("Upload csv file for training", type=["csv"])
+            if training_file is not None:
+                training_data = pd.read_csv(training_file)
+
+            training_model = st.selectbox(
+                "Select training model",
+                ("Logistic regression", "SVM", "Naive Bayes", "Decision tree", "XGBoost")
+            )
+            st.button("Start Training")
+        
+        if mode == "Testing":
+            upload_type = st.selectbox(
+                "Select testing data upload type",
+                ("File", "Inputs")
+            )
+    return mode, training_data, training_model, upload_type
 
 def main():
-	add_selectbox = st.sidebar.selectbox(
-	"How would you like to predict?",
-	("Online", "Batch"))
-	st.sidebar.info('This app is created to predict Customer Churn')
-	st.title("Predicting Customer Churn")
-	if add_selectbox == 'Online':
-		gender = st.selectbox('Gender:', ['male', 'female'])
-		seniorcitizen= st.selectbox(' Customer is a senior citizen:', [0, 1])
-		partner= st.selectbox(' Customer has a partner:', ['yes', 'no'])
-		dependents = st.selectbox(' Customer has  dependents:', ['yes', 'no'])
-		phoneservice = st.selectbox(' Customer has phoneservice:', ['yes', 'no'])
-		multiplelines = st.selectbox(' Customer has multiplelines:', ['yes', 'no', 'no_phone_service'])
-		internetservice= st.selectbox(' Customer has internetservice:', ['dsl', 'no', 'fiber_optic'])
-		onlinesecurity= st.selectbox(' Customer has onlinesecurity:', ['yes', 'no', 'no_internet_service'])
-		onlinebackup = st.selectbox(' Customer has onlinebackup:', ['yes', 'no', 'no_internet_service'])
-		deviceprotection = st.selectbox(' Customer has deviceprotection:', ['yes', 'no', 'no_internet_service'])
-		techsupport = st.selectbox(' Customer has techsupport:', ['yes', 'no', 'no_internet_service'])
-		streamingtv = st.selectbox(' Customer has streamingtv:', ['yes', 'no', 'no_internet_service'])
-		streamingmovies = st.selectbox(' Customer has streamingmovies:', ['yes', 'no', 'no_internet_service'])
-		contract= st.selectbox(' Customer has a contract:', ['month-to-month', 'one_year', 'two_year'])
-		paperlessbilling = st.selectbox(' Customer has a paperlessbilling:', ['yes', 'no'])
-		paymentmethod= st.selectbox('Payment Option:', ['bank_transfer_(automatic)', 'credit_card_(automatic)', 'electronic_check' ,'mailed_check'])
-		tenure = st.number_input('Number of months the customer has been with the current telco provider :', min_value=0, max_value=240, value=0)
-		monthlycharges= st.number_input('Monthly charges :', min_value=0, max_value=240, value=0)
-		totalcharges = tenure*monthlycharges
-		output= ""
-		output_prob = ""
-		input_dict={
-				"gender":gender ,
-				"seniorcitizen": seniorcitizen,
-				"partner": partner,
-				"dependents": dependents,
-				"phoneservice": phoneservice,
-				"multiplelines": multiplelines,
-				"internetservice": internetservice,
-				"onlinesecurity": onlinesecurity,
-				"onlinebackup": onlinebackup,
-				"deviceprotection": deviceprotection,
-				"techsupport": techsupport,
-				"streamingtv": streamingtv,
-				"streamingmovies": streamingmovies,
-				"contract": contract,
-				"paperlessbilling": paperlessbilling,
-				"paymentmethod": paymentmethod,
-				"tenure": tenure,
-				"monthlycharges": monthlycharges,
-				"totalcharges": totalcharges
-			}
+    training_data = None
+    training_model = ""
+    upload_type=""
 
-		if st.button("Predict"):
-			y_pred = model.predict_proba(X)[0, 1]
-			churn = y_pred >= 0.5
-			output_prob = float(y_pred)
-			output = bool(churn)
-		st.success('Churn: {0}, Risk Score: {1}'.format(output, output_prob))
-	if add_selectbox == 'Batch':
-		file_upload = st.file_uploader("Upload csv file for predictions", type=["csv"])
-		if file_upload is not None:
-			data = pd.read_csv(file_upload)
-			churn = y_pred >= 0.5
-			churn = bool(churn)
-			st.write(churn)
+    with st.sidebar:
+        mode = st.selectbox(
+                "Select mode",
+                ("Training", "Testing")
+            )
+
+        if mode == "Training":
+            training_file = st.file_uploader("Upload csv file for training", type=["csv"])
+            if training_file is not None:
+                training_data = pd.read_csv(training_file)
+
+            training_model = st.selectbox(
+                "Select training model",
+                ("Logistic regression", "SVM", "Naive Bayes", "Decision tree", "XGBoost")
+            )
+            st.button("Start Training")
+        
+        if mode == "Testing":
+            upload_type = st.selectbox(
+                "Select testing data upload type",
+                ("File", "Inputs")
+            )
+    
+    print(training_model)
+    if mode == "Training":
+        dp = DataProcessor(df=training_data)
+        drawer = Drawer(training_data)
+        if training_data is not None and not training_data.empty:
+            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+                "Churn distribution", 
+                "Gender Churn distribution", 
+                "Churn Reason distribution",
+                "Column Histogram",
+                "Box plot",
+                "Smooth",
+            ])
+
+            with tab1:
+                churn_dist = drawer.plot_churn_dist()
+                st.pyplot(churn_dist)
+            with tab2:
+                gender_churn_dist = drawer.plot_gender_churn_dist()
+                st.plotly_chart(gender_churn_dist)
+            with tab3:
+                churn_reason_dist = drawer.plot_churn_reason_dist()
+                st.pyplot(churn_reason_dist)
+            with tab4:
+                columns_histogram = drawer.plot_columns_histogram(SERV_COL)
+                st.pyplot(columns_histogram)
+            with tab5:
+                boxplots = drawer.plot_boxplots()
+                st.pyplot(boxplots)
+            with tab6:
+                smooth_dist = drawer.plot_smooth_dist()
+                st.pyplot(smooth_dist)
+
+
+    if mode == "Testing" and upload_type == "File":
+        testing_file = st.file_uploader("Upload csv file for testing", type=["csv"])
+        if testing_file is not None:
+            data = pd.read_csv(testing_file)
+
+    if mode == "Testing" and upload_type == "Inputs":
+        gender = st.selectbox('Gender:', ['male', 'female'])
+        seniorcitizen= st.selectbox(' Customer is a senior citizen:', [0, 1])
+        partner= st.selectbox(' Customer has a partner:', ['yes', 'no'])
+        dependents = st.selectbox(' Customer has  dependents:', ['yes', 'no'])
+        phoneservice = st.selectbox(' Customer has phoneservice:', ['yes', 'no'])
+        multiplelines = st.selectbox(' Customer has multiplelines:', ['yes', 'no', 'no_phone_service'])
+        internetservice= st.selectbox(' Customer has internetservice:', ['dsl', 'no', 'fiber_optic'])
+        onlinesecurity= st.selectbox(' Customer has onlinesecurity:', ['yes', 'no', 'no_internet_service'])
+        onlinebackup = st.selectbox(' Customer has onlinebackup:', ['yes', 'no', 'no_internet_service'])
+        deviceprotection = st.selectbox(' Customer has deviceprotection:', ['yes', 'no', 'no_internet_service'])
+        techsupport = st.selectbox(' Customer has techsupport:', ['yes', 'no', 'no_internet_service'])
+        streamingtv = st.selectbox(' Customer has streamingtv:', ['yes', 'no', 'no_internet_service'])
+        streamingmovies = st.selectbox(' Customer has streamingmovies:', ['yes', 'no', 'no_internet_service'])
+        contract= st.selectbox(' Customer has a contract:', ['month-to-month', 'one_year', 'two_year'])
+        paperlessbilling = st.selectbox(' Customer has a paperlessbilling:', ['yes', 'no'])
+        paymentmethod= st.selectbox('Payment Option:', ['bank_transfer_(automatic)', 'credit_card_(automatic)', 'electronic_check' ,'mailed_check'])
+        tenure = st.number_input('Number of months the customer has been with the current telco provider :', min_value=0, max_value=240, value=0)
+        monthlycharges= st.number_input('Monthly charges :', min_value=0, max_value=240, value=0)
+        totalcharges = tenure*monthlycharges
+        output= ""
+        output_prob = ""
+        input_dict={
+                "gender":gender ,
+                "seniorcitizen": seniorcitizen,
+                "partner": partner,
+                "dependents": dependents,
+                "phoneservice": phoneservice,
+                "multiplelines": multiplelines,
+                "internetservice": internetservice,
+                "onlinesecurity": onlinesecurity,
+                "onlinebackup": onlinebackup,
+                "deviceprotection": deviceprotection,
+                "techsupport": techsupport,
+                "streamingtv": streamingtv,
+                "streamingmovies": streamingmovies,
+                "contract": contract,
+                "paperlessbilling": paperlessbilling,
+                "paymentmethod": paymentmethod,
+                "tenure": tenure,
+                "monthlycharges": monthlycharges,
+                "totalcharges": totalcharges
+            }
 
 
 def test():
@@ -92,4 +170,6 @@ def test():
 	
 
 if __name__ == '__main__':
-	test()
+	main()
+        
+

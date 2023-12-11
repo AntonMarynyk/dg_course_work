@@ -7,7 +7,11 @@ from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 
 class DataProcessor:
-    def fetch_file(self, link):
+    def __init__(self, df=None) -> None:
+        if df is not None:
+            self.df = df
+
+    def fetch_file(self, link):        
         r = requests.get(link)
         data = r.content.decode('utf-8')
         self.df = pd.read_csv(StringIO(data))
