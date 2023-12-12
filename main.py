@@ -4,6 +4,7 @@ import pandas as pd
 from utils.data_processor import DataProcessor
 from utils.drawer import Drawer
 from utils.predictor import Predictor
+from utils.functions import isDataLoaded, startLearning
 
 # Link to initial file with ds
 LINK = 'https://drive.google.com/uc?id=1tbgtf2us4bmZXWUDk9_EpgevwA1sI3Ri&export=download'
@@ -18,6 +19,7 @@ def main():
     training_data = None
     training_model = ""
     upload_type=""
+    is_prediction_result_ready = False
 
     with st.sidebar:
         mode = st.selectbox(
@@ -34,8 +36,10 @@ def main():
                 "Select training model",
                 ("Logistic regression", "SVM", "Naive Bayes", "Decision tree", "XGBoost")
             )
-            st.button("Start Training")
-        
+
+            if st.button("Start Training with " + training_model) and isDataLoaded(training_data):
+                startLearning(training_data=training_data, training_model=training_model)
+                is_prediction_result_ready=True
         if mode == "Testing":
             upload_type = st.selectbox(
                 "Select testing data upload type",
@@ -45,7 +49,8 @@ def main():
     if mode == "Training":
         dp = DataProcessor(df=training_data)
         drawer = Drawer(training_data)
-        if training_data is not None and not training_data.empty:
+        if st.sidebar.button("Visualize uploaded data") and isDataLoaded(training_data) and not is_prediction_result_ready:
+            is_prediction_result_ready=False
             tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
                 "Churn distribution", 
                 "Gender Churn distribution", 
@@ -73,6 +78,23 @@ def main():
             with tab6:
                 smooth_dist = drawer.plot_smooth_dist()
                 st.pyplot(smooth_dist)
+        
+        if is_prediction_result_ready:
+            predictor = Predictor()
+            dp = DataProcessor(df=training_data)
+            X, Y = dp.prepare_data()
+            X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
+            plt, table = predictor.plot_prediction_result(X_test.shape[0])
+            st.pyplot(plt)
+            st.write("Пояснення метрик якості моделі:")
+            st.write("-------------------------------------------------")
+            st.write("Accuracy (Точність): Відсоток правильних класифікацій.")
+            st.write("F1 Score: Гармонічний середній між точністю та повнотою.")
+            st.write("Precision (Точність): Відсоток правильно класифікованих позитивних прикладів.")
+            st.write("Recall (Повнота): Відсоток правильно визначених позитивних прикладів.")
+            st.write("-------------------------------------------------\n")
+            st.table(table)
+
 
 
     if mode == "Testing" and upload_type == "File":
