@@ -17,9 +17,9 @@ class DataProcessor:
         self.df = pd.read_csv(StringIO(data))
         return self.df
     
-    def prepare_data(self):
+    def prepare_data(self, withChurn=True):
         df_copy = self.df.copy()
-        df_copy.drop(columns='customerID', inplace=True)
+        df_copy = df_copy.drop(columns='customerID')
         df_copy.drop(columns='ChurnReason', inplace=True)
         df_copy.TotalCharges = pd.to_numeric(df_copy.TotalCharges, errors='coerce')
         df_copy.drop(columns='ZIPcode', inplace=True)
@@ -70,7 +70,7 @@ class DataProcessor:
 
         df_copy_transformed = df_copy.copy()
 
-        label_encoding_columns = ['gender', 'Partner', 'Dependents', 'PaperlessBilling', 'PhoneService', 'Churn']
+        label_encoding_columns = ['gender', 'Partner', 'Dependents', 'PaperlessBilling', 'PhoneService', 'Churn'] if withChurn else ['gender', 'Partner', 'Dependents', 'PaperlessBilling', 'PhoneService']
 
         for column in label_encoding_columns:
             if column == 'gender':
@@ -91,8 +91,8 @@ class DataProcessor:
             df_copy_transformed[column] = (df_copy_transformed[column] - min_column) / (max_column - min_column)
         
 
-        X = df_copy_transformed.drop(columns='Churn')
-        Y = df_copy_transformed.loc[:, 'Churn']
+        X = df_copy_transformed.drop(columns='Churn') if withChurn else df_copy_transformed
+        Y = df_copy_transformed.loc[:, 'Churn'] if withChurn else None
 
         return X, Y
     

@@ -19,7 +19,17 @@ def main():
     training_data = None
     training_model = ""
     upload_type=""
-    is_prediction_result_ready = False
+    if 'is_training_ready' not in st.session_state:
+        st.session_state['is_training_ready'] = False
+    
+    if "training_data" not in st.session_state:
+        st.session_state['training_data'] = None
+    
+    if "trained_model" not in st.session_state:
+        st.session_state["trained_model"] = None
+    
+    if "testing_file_data" not in st.session_state:
+        st.session_state["testing_file_data"] = None
 
     with st.sidebar:
         mode = st.selectbox(
@@ -30,16 +40,17 @@ def main():
         if mode == "Training":
             training_file = st.file_uploader("Upload csv file for training", type=["csv"])
             if training_file is not None:
-                training_data = pd.read_csv(training_file)
+                st.session_state['training_data'] = pd.read_csv(training_file)
 
             training_model = st.selectbox(
                 "Select training model",
                 ("Logistic regression", "SVM", "Naive Bayes", "Decision tree", "XGBoost")
             )
 
-            if st.button("Start Training with " + training_model) and isDataLoaded(training_data):
-                startLearning(training_data=training_data, training_model=training_model)
-                is_prediction_result_ready=True
+            if st.button("Start Training with " + training_model) and isDataLoaded(st.session_state['training_data']):
+                trained_model, _ = startLearning(training_data=st.session_state['training_data'], training_model=training_model)
+                st.session_state["trained_model"] = trained_model
+                st.session_state['is_training_ready'] = True
         if mode == "Testing":
             upload_type = st.selectbox(
                 "Select testing data upload type",
@@ -47,41 +58,42 @@ def main():
             )
     
     if mode == "Training":
-        dp = DataProcessor(df=training_data)
-        drawer = Drawer(training_data)
-        if st.sidebar.button("Visualize uploaded data") and isDataLoaded(training_data) and not is_prediction_result_ready:
-            is_prediction_result_ready=False
-            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-                "Churn distribution", 
-                "Gender Churn distribution", 
-                "Churn Reason distribution",
-                "Column Histogram",
-                "Box plot",
-                "Smooth",
-            ])
+        dp = DataProcessor(df=st.session_state['training_data'])
+        drawer = Drawer(st.session_state['training_data'])
+        if st.sidebar.button("Visualize uploaded data"):
+            st.session_state['is_training_ready'] = False
+            if isDataLoaded(st.session_state['training_data']) and not st.session_state['is_training_ready']:
+                tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+                    "Churn distribution", 
+                    "Gender Churn distribution", 
+                    "Churn Reason distribution",
+                    "Column Histogram",
+                    "Box plot",
+                    "Smooth",
+                ])
 
-            with tab1:
-                churn_dist = drawer.plot_churn_dist()
-                st.pyplot(churn_dist)
-            with tab2:
-                gender_churn_dist = drawer.plot_gender_churn_dist()
-                st.plotly_chart(gender_churn_dist)
-            with tab3:
-                churn_reason_dist = drawer.plot_churn_reason_dist()
-                st.pyplot(churn_reason_dist)
-            with tab4:
-                columns_histogram = drawer.plot_columns_histogram(SERV_COL)
-                st.pyplot(columns_histogram)
-            with tab5:
-                boxplots = drawer.plot_boxplots()
-                st.pyplot(boxplots)
-            with tab6:
-                smooth_dist = drawer.plot_smooth_dist()
-                st.pyplot(smooth_dist)
+                with tab1:
+                    churn_dist = drawer.plot_churn_dist()
+                    st.pyplot(churn_dist)
+                with tab2:
+                    gender_churn_dist = drawer.plot_gender_churn_dist()
+                    st.plotly_chart(gender_churn_dist)
+                with tab3:
+                    churn_reason_dist = drawer.plot_churn_reason_dist()
+                    st.pyplot(churn_reason_dist)
+                with tab4:
+                    columns_histogram = drawer.plot_columns_histogram(SERV_COL)
+                    st.pyplot(columns_histogram)
+                with tab5:
+                    boxplots = drawer.plot_boxplots()
+                    st.pyplot(boxplots)
+                with tab6:
+                    smooth_dist = drawer.plot_smooth_dist()
+                    st.pyplot(smooth_dist)
         
-        if is_prediction_result_ready:
+        if st.session_state['is_training_ready']:
             predictor = Predictor()
-            dp = DataProcessor(df=training_data)
+            dp = DataProcessor(df=st.session_state['training_data'])
             X, Y = dp.prepare_data()
             X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
             plt, table = predictor.plot_prediction_result(X_test.shape[0])
@@ -95,70 +107,115 @@ def main():
             st.write("-------------------------------------------------\n")
             st.table(table)
 
+    if mode == "Testing":
+        if not st.session_state['is_training_ready']:
+            st.error('You need to train model before testing!', icon="🚨")
+        else:
+            if upload_type == "File":
+                testing_file = st.file_uploader("Upload csv file for testing", type=["csv"])
+                if testing_file is not None:
+                    data = pd.read_csv(testing_file).iloc[:50]
+                    testing_data = data.copy()
+                    st.session_state["testing_file_data"] = testing_data
+
+                    dp = DataProcessor(df=data)
+                    X, _ = dp.prepare_data(False)
+
+                    x_test = X
+                    prediction= st.session_state["trained_model"].predict(x_test)
+                    data["Churn Prediction Result"] = prediction
+                    st.table(data)
+
+            if upload_type == "Inputs":
+                gender = st.selectbox('Gender:', ['Мale', 'Female'])
+                seniorcitizen= st.selectbox(' Customer is a senior citizen:', [0, 1])
+                zipCode= st.number_input('Zip code', min_value=90020, max_value=99999, value=90020)
+                partner= st.selectbox(' Customer has a partner:', ['Yes', 'No'])
+                dependents = st.selectbox(' Customer has  dependents:', ['Yes', 'No'])
+                tenure = st.number_input('Number of months the customer has been with the current telco provider :', min_value=0, max_value=240, value=0)
+                phoneservice = st.selectbox(' Customer has phoneservice:', ['Yes', 'No'])
+                multiplelines = st.selectbox(' Customer has multiplelines:', ['Yes', 'No', 'No phone service'])
+                internetservice= st.selectbox(' Customer has internetservice:', ['DSL', 'No', 'Fiber optic'])
+                onlinesecurity= st.selectbox(' Customer has onlinesecurity:', ['Yes', 'No', 'No internet service'])
+                onlinebackup = st.selectbox(' Customer has onlinebackup:', ['Yes', 'No', 'No internet service'])
+                deviceprotection = st.selectbox(' Customer has deviceprotection:', ['Yes', 'No', 'No internet service'])
+                techsupport = st.selectbox(' Customer has techsupport:', ['Yes', 'No', 'No internet service'])
+                streamingtv = st.selectbox(' Customer has streamingtv:', ['Yes', 'No', 'No internet service'])
+                streamingmovies = st.selectbox(' Customer has streamingmovies:', ['Yes', 'No', 'No internet service'])
+                contract= st.selectbox(' Customer has a contract:', ['Month-to-month', 'One year', 'Two year'])
+                paperlessbilling = st.selectbox(' Customer has a paperlessbilling:', ['Yes', 'No'])
+                paymentmethod= st.selectbox('Payment Option:', ['Bank transfer (automatic)', 'Credit card (automatic)', 'Electronic check' ,'Mailed check'])
+                monthlycharges= st.number_input('Monthly charges :', min_value=0, max_value=240, value=0)
+                totalcharges = tenure*monthlycharges
+                churnReason= st.selectbox(' Churn reason:', ['Competitor offered higher download speeds', 'Competitor made better offer', 'Competitor had better devices', 'Competitor offered more data'])
+                input_dict = {
+                    'gender': [gender],
+                    'SeniorCitizen': [seniorcitizen],
+                    'ZIPcode': [zipCode],
+                    'Partner': [partner],
+                    'Dependents': [dependents],
+                    'tenure': [tenure],
+                    'PhoneService': [phoneservice],
+                    'MultipleLines': [multiplelines],
+                    'InternetService': [internetservice],
+                    'OnlineSecurity': [onlinesecurity],
+                    'OnlineBackup': [onlinebackup],
+                    'DeviceProtection': [deviceprotection],
+                    'TechSupport': [techsupport],
+                    'StreamingTV': [streamingtv],
+                    'StreamingMovies': [streamingmovies],
+                    'Contract': [contract],
+                    'PaperlessBilling': [paperlessbilling],
+                    'PaymentMethod': [paymentmethod],
+                    'MonthlyCharges': [monthlycharges],
+                    'TotalCharges': [totalcharges],
+                    'ChurnReason': [churnReason]
+                }
+
+                fullDF = pd.read_csv("./test_prediction_ds.csv")
+
+                input_data = pd.DataFrame.from_dict(input_dict)
+                input_data["customerID"] = "test-input"
+
+                data = pd.concat([fullDF, input_data], ignore_index=True)
+                data['ChurnReason'] = data['ChurnReason'].fillna('Competitor made better offer')
+
+                dp = DataProcessor(df=data)
+                X, _ = dp.prepare_data(False)
+                
+                prediction= st.session_state["trained_model"].predict(X.dropna())
+                input_data["Churn Prediction Result"] = prediction[-1]
+                st.table(input_data.drop(columns="customerID"))
 
 
-    if mode == "Testing" and upload_type == "File":
-        testing_file = st.file_uploader("Upload csv file for testing", type=["csv"])
-        if testing_file is not None:
-            data = pd.read_csv(testing_file)
-
-    if mode == "Testing" and upload_type == "Inputs":
-        gender = st.selectbox('Gender:', ['male', 'female'])
-        seniorcitizen= st.selectbox(' Customer is a senior citizen:', [0, 1])
-        partner= st.selectbox(' Customer has a partner:', ['yes', 'no'])
-        dependents = st.selectbox(' Customer has  dependents:', ['yes', 'no'])
-        phoneservice = st.selectbox(' Customer has phoneservice:', ['yes', 'no'])
-        multiplelines = st.selectbox(' Customer has multiplelines:', ['yes', 'no', 'no_phone_service'])
-        internetservice= st.selectbox(' Customer has internetservice:', ['dsl', 'no', 'fiber_optic'])
-        onlinesecurity= st.selectbox(' Customer has onlinesecurity:', ['yes', 'no', 'no_internet_service'])
-        onlinebackup = st.selectbox(' Customer has onlinebackup:', ['yes', 'no', 'no_internet_service'])
-        deviceprotection = st.selectbox(' Customer has deviceprotection:', ['yes', 'no', 'no_internet_service'])
-        techsupport = st.selectbox(' Customer has techsupport:', ['yes', 'no', 'no_internet_service'])
-        streamingtv = st.selectbox(' Customer has streamingtv:', ['yes', 'no', 'no_internet_service'])
-        streamingmovies = st.selectbox(' Customer has streamingmovies:', ['yes', 'no', 'no_internet_service'])
-        contract= st.selectbox(' Customer has a contract:', ['month-to-month', 'one_year', 'two_year'])
-        paperlessbilling = st.selectbox(' Customer has a paperlessbilling:', ['yes', 'no'])
-        paymentmethod= st.selectbox('Payment Option:', ['bank_transfer_(automatic)', 'credit_card_(automatic)', 'electronic_check' ,'mailed_check'])
-        tenure = st.number_input('Number of months the customer has been with the current telco provider :', min_value=0, max_value=240, value=0)
-        monthlycharges= st.number_input('Monthly charges :', min_value=0, max_value=240, value=0)
-        totalcharges = tenure*monthlycharges
-        output= ""
-        output_prob = ""
-        input_dict={
-                "gender":gender ,
-                "seniorcitizen": seniorcitizen,
-                "partner": partner,
-                "dependents": dependents,
-                "phoneservice": phoneservice,
-                "multiplelines": multiplelines,
-                "internetservice": internetservice,
-                "onlinesecurity": onlinesecurity,
-                "onlinebackup": onlinebackup,
-                "deviceprotection": deviceprotection,
-                "techsupport": techsupport,
-                "streamingtv": streamingtv,
-                "streamingmovies": streamingmovies,
-                "contract": contract,
-                "paperlessbilling": paperlessbilling,
-                "paymentmethod": paymentmethod,
-                "tenure": tenure,
-                "monthlycharges": monthlycharges,
-                "totalcharges": totalcharges
-            }
 
 
-def test():
-    dp = DataProcessor()
-    df = dp.fetch_file(link=LINK)
-    X, Y = dp.prepare_data()
-    X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
-    x_sm, y_sm = dp.overSampling(X_train, Y_train)
-    x_rus, y_rus = dp.underSampling(X_train, Y_train)
-    predictor = Predictor()
-    best_model, best_predictions = predictor.get_xgbclassifier_best_model([('X_train', X_train, Y_train), ('x_rus', x_rus, y_rus), ('x_sm', x_sm, y_sm)], X_test, Y_test)
-    print(best_model)
+# def test():
+#     dp = DataProcessor()
+#     df = dp.fetch_file(link=LINK)
+#     X, Y = dp.prepare_data()
+#     X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
+#     x_sm, y_sm = dp.overSampling(X_train, Y_train)
+#     x_rus, y_rus = dp.underSampling(X_train, Y_train)
+#     predictor = Predictor()
+#     best_model, best_predictions = predictor.get_naive_bayes_best_model([('X_train', X_train, Y_train), ('x_rus', x_rus, y_rus), ('x_sm', x_sm, y_sm)], X_test, Y_test)
+#     print(X_test.iloc[:1])
+#     print(best_model.predict(X_test.iloc[:1]))
 
-	
+# def test1():
+#     # Загрузка CSV файла в DataFrame
+#     df = pd.read_csv('/Users/antonmarynych/Desktop/Учеба/dg/telecom_customer_churn_final.csv')
+#     print(df)
+
+#     # Удаление колонки с названием 'Churn'
+#     df = df.drop('Churn', axis=1)  # axis=1 указывает на удаление колонки, а не строки
+
+#     # Обрезка первых пяти строк
+#     df = df.iloc[5:]
+
+#     # Сохранение измененного DataFrame обратно в CSV файл
+#     df.iloc[:5].to_csv('test_prediction_ds_1.csv', index=False)  # index=False для сохранения
+
 
 if __name__ == '__main__':
 	main()
