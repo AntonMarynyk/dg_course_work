@@ -1,5 +1,6 @@
 from utils.data_processor import DataProcessor
 from utils.predictor import Predictor
+import streamlit as st
 
 def isDataLoaded(df):
     return df is not None and not df.empty
@@ -9,6 +10,7 @@ def startLearning(training_model, training_data):
     dp = DataProcessor(df=training_data)
     X, Y = dp.prepare_data()
     X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
+    st.session_state["train_test_split"] = X_train, X_test, Y_train, Y_test
     x_sm, y_sm = dp.overSampling(X_train, Y_train)
     x_rus, y_rus = dp.underSampling(X_train, Y_train)
     if training_model == "Logistic regression":

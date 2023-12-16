@@ -22,6 +22,9 @@ def main():
     if 'is_training_ready' not in st.session_state:
         st.session_state['is_training_ready'] = False
     
+    if 'training_model_type' not in st.session_state:
+        st.session_state["training_model_type"] = "Logistic regression"
+
     if "training_data" not in st.session_state:
         st.session_state['training_data'] = None
     
@@ -30,6 +33,9 @@ def main():
     
     if "testing_file_data" not in st.session_state:
         st.session_state["testing_file_data"] = None
+
+    if "train_test_split" not in st.session_state:
+        st.session_state["train_test_split"] = None, None, None, None 
 
     with st.sidebar:
         mode = st.selectbox(
@@ -48,6 +54,7 @@ def main():
             )
 
             if st.button("Start Training with " + training_model) and isDataLoaded(st.session_state['training_data']):
+                st.session_state["training_model_type"] = training_model
                 trained_model, _ = startLearning(training_data=st.session_state['training_data'], training_model=training_model)
                 st.session_state["trained_model"] = trained_model
                 st.session_state['is_training_ready'] = True
@@ -95,7 +102,7 @@ def main():
             predictor = Predictor()
             dp = DataProcessor(df=st.session_state['training_data'])
             X, Y = dp.prepare_data()
-            X_train, X_test, Y_train, Y_test = dp.train_test_split(X, Y)
+            X_train, X_test, Y_train, Y_test = st.session_state['train_test_split']
             plt, table = predictor.plot_prediction_result(X_test.shape[0])
             st.pyplot(plt)
             st.write("Пояснення метрик якості моделі:")
@@ -120,11 +127,56 @@ def main():
 
                     dp = DataProcessor(df=data)
                     X, _ = dp.prepare_data(False)
+                    X_train, _x, Y_train, _y = st.session_state["train_test_split"]
+                    x_rus, y_rus = dp.underSampling(X_train, Y_train)
 
                     x_test = X
                     prediction= st.session_state["trained_model"].predict(x_test)
                     data["Churn Prediction Result"] = prediction
                     st.table(data)
+                    if st.session_state["training_model_type"] == "Logistic regression":
+                        coefficients = st.session_state["trained_model"].coef_
+                        drawer = Drawer(df=data)
+
+                        res = drawer.plot_logreg_impact(coefficients, x_rus)
+                        st.pyplot(res)
+                    if st.session_state["training_model_type"] == "Decision tree":
+                        importances = st.session_state["trained_model"].feature_importances_
+                        drawer = Drawer(df=data)
+
+                        res = drawer.plot_logreg_impact(importances, x_rus)
+
+                        st.pyplot(res)
+                    data["Churn"] = prediction
+                    drawer = Drawer(data)
+                    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+                        "Churn distribution", 
+                        "Gender Churn distribution", 
+                        "Churn Reason distribution",
+                        "Column Histogram",
+                        "Box plot",
+                        "Smooth",
+                    ])
+                    with tab1:
+                        churn_dist = drawer.plot_churn_dist()
+                        st.pyplot(churn_dist)
+                    with tab2:
+                        gender_churn_dist = drawer.plot_gender_churn_dist()
+                        st.plotly_chart(gender_churn_dist)
+                    with tab3:
+                        churn_reason_dist = drawer.plot_churn_reason_dist()
+                        st.pyplot(churn_reason_dist)
+                    with tab4:
+                        columns_histogram = drawer.plot_columns_histogram(SERV_COL)
+                        st.pyplot(columns_histogram)
+                    with tab5:
+                        boxplots = drawer.plot_boxplots()
+                        st.pyplot(boxplots)
+                    with tab6:
+                        smooth_dist = drawer.plot_smooth_dist()
+                        st.pyplot(smooth_dist)
+
+
 
             if upload_type == "Inputs":
                 gender = st.selectbox('Gender:', ['Мale', 'Female'])
@@ -182,10 +234,25 @@ def main():
 
                 dp = DataProcessor(df=data)
                 X, _ = dp.prepare_data(False)
+                X_train, _x, Y_train, _y = st.session_state["train_test_split"]
+                x_rus, y_rus = dp.underSampling(X_train, Y_train)
                 
                 prediction= st.session_state["trained_model"].predict(X.dropna())
                 input_data["Churn Prediction Result"] = prediction[-1]
                 st.table(input_data.drop(columns="customerID"))
+                if st.session_state["training_model_type"] == "Logistic regression":
+                    coefficients = st.session_state["trained_model"].coef_
+                    drawer = Drawer(df=data)
+
+                    res = drawer.plot_logreg_impact(coefficients, x_rus)
+                    st.pyplot(res)
+                if st.session_state["training_model_type"] == "Decision tree":
+                    importances = st.session_state["trained_model"].feature_importances_
+                    drawer = Drawer(df=data)
+
+                    res = drawer.plot_logreg_impact(importances, x_rus)
+
+                    st.pyplot(res)
 
 
 

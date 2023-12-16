@@ -159,3 +159,40 @@ class Drawer:
             plt.ylabel('Correlation with Churn')
             plt.show()
             return plt
+    
+    def plot_logreg_impact(self, coefficients, x_rus):
+        feat_importances = pd.DataFrame(coefficients.T, index=x_rus.columns, columns=["Coefficient"])
+        feat_importances.sort_values(by='Coefficient', ascending=True, inplace=True)
+        
+        # Налаштування параметрів графіка
+        plt.figure(figsize=(10, 7))
+        plt.barh(feat_importances.index, feat_importances["Coefficient"], color='green')  # Перефарбування стовпців в зелений колір
+        plt.xlabel("Coefficient", fontsize=12)  # Зміна розміру шрифту для осі x
+        plt.ylabel("Features", fontsize=12)  # Зміна розміру шрифту для осі y
+        plt.title("Feature Coefficients", fontsize=14)  # Зміна розміру шрифту для заголовку
+        plt.xticks(fontsize=10)  # Зміна розміру шрифту для позначок осі x
+        plt.yticks(fontsize=10)  # Зміна розміру шрифту для позначок осі y
+        plt.gca().invert_yaxis()  # Обернення осі y, щоб найважливіші ознаки були зверху
+        plt.grid(axis='x', linestyle='--', alpha=0.7)  # Додавання пунктирної сітки по осі x
+
+        return plt
+    
+    def plot_decision_tree_impact(self, importances, x_rus):
+        feat_importances = pd.DataFrame(importances, index=x_rus.columns, columns=["Importance"])
+
+        # Сортування ознак за важливістю
+        feat_importances.sort_values(by='Importance', ascending=False, inplace=True)
+
+        # Налаштування параметрів графіка
+        plt.figure(figsize=(9, 7))
+        plt.barh(feat_importances.index, feat_importances["Importance"], color='green')  # Зміна кольору на зелений
+        plt.xlabel("Importance", fontsize=12)  # Зміна розміру шрифту для осі x
+        plt.ylabel("Features", fontsize=12)  # Зміна розміру шрифту для осі y
+        plt.title("Feature Importance - Decision Tree", fontsize=14)  # Зміна розміру шрифту для заголовку
+        plt.xticks(fontsize=10)  # Зміна розміру шрифту для позначок осі x
+        plt.yticks(fontsize=10)  # Зміна розміру шрифту для позначок осі y
+        plt.gca().invert_yaxis()  # Обернення осі y, щоб найважливіші ознаки були зверху
+        plt.grid(axis='x', linestyle='--', alpha=0.7)  # Додавання пунктирної сітки по осі x
+
+        return plt
+        
